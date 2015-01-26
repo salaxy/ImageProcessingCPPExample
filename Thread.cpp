@@ -4,7 +4,10 @@
 #include "PioneerBVDlg.h"
 #include "Image.h"
 #include "cv.h"
+#include "cxcore.h"
+#include "cxtypes.h"
 #include "Shared_Memory.h"
+//#include "highgui.h"
 
 extern volatile bool bEndThread;	// Wunsch der GUI an den Thread, 
 									// sich zu beenden
@@ -311,11 +314,18 @@ UINT WorkerThread( LPVOID pParam ){
 	CImage aImageBlueOrange[ANZ_BILD]; // Array mit vollständigen Bildern
 	IplImage *p,*blueImage[ANZ_BILD]; // pIplImage, um ipl-Funktionen zu nutzen
 	IplImage *orangeImage[ANZ_BILD]; //Array von Imagezeigern
-	IplImage *grauBildBlau;		//grauwert bild fuer binaerbild
+	IplImage *grauBildBlau;		//grauwert bild fuer bnaerbild
 	IplImage *grauBildOrange;	//grauwert bild fuer binaerbild
+
+	IplImage *image[ANZ_BILD];
+	CImage aImage[ANZ_BILD];
+	IplImage *grauBild;
+
 
 	vector<CvRect> blueRectObjects; //Liste von Objekten als Quadrate//verified
 	vector<CvRect> orangeRectObjects; //Liste von Objekten als Quadrate//verified
+
+	vector<CvRect> gameRectObjects;
 
 	CvRect rect; //quadratischer Rahmen eines Objekts
 	double realArea; //reale flaeche des Objekts
@@ -393,13 +403,17 @@ UINT WorkerThread( LPVOID pParam ){
 	for(int b=0;b<ANZ_BILD;b++) {
 		aImageBlue[b].Create( pImage->Width(), pImage->Height(), 24 );
 		aImageBlueOrange[b].Create( pImage->Width(), pImage->Height(), 24 );
+		aImage[b].Create( pImage->Width(), pImage->Height(), 24 );
 
 		blueImage[b] = aImageBlue[b].GetImage();
 		orangeImage[b] = aImageBlueOrange[b].GetImage();
+		image[b] = aImage[b].GetImage();
 	}
 
 	grauBildBlau = cvCreateImage(cvGetSize(p), 8, 1);
 	grauBildOrange = cvCreateImage(cvGetSize(p), 8, 1);
+	grauBild = cvCreateImage(cvGetSize(p), 8, 1);
+	//img[1]=cvCreateImage(cvGetSize(p), 8, 1);
 
 	sprintf_s(sStr,100,"%d %dx%d Bilder angelegt ...",ANZ_BILD,p->width, p->height);
 	pDlg->Say(sStr);
@@ -512,7 +526,41 @@ UINT WorkerThread( LPVOID pParam ){
 			}
 		}
 
+		//IplImage *img=NULL;
+		//IplImage *gray=NULL;
+		//CvMemStorage* contour_storage;
+		//CvSeq* contours=NULL;
+		//CvPoint2D32f *corners;
 
+		//img = cvLoadImage("tictactoe.bmp",CV_LOAD_IMAGE_COLOR);
+		//gray = cvCreateImage( cvGetSize(img), IPL_DEPTH_8U, 1 );
+
+		//cvSmooth( img, img, CV_GAUSSIAN, 3, 0, 0, 0);
+		//cvCvtColor(img, gray, CV_RGB2GRAY);
+		//cvAdaptiveThreshold(gray, gray, 128,CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY_INV, 3, 5);
+		//cvNamedWindow( "Threshold", CV_WINDOW_AUTOSIZE);
+		//cvShowImage("Threshold", gray);
+
+		//contour_storage = cvCreateMemStorage(0);
+		//corners = (CvPoint2D32f *)malloc(sizeof(CvPoint2D32f)*9);
+		//cvFindContours(gray, contour_storage, &contours, sizeof (CvContour), CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, cvPoint(0,0));
+		//cvDrawContours(img, contours, CV_RGB(255,0,0), CV_RGB(0,255,0), 2, 4, 8, cvPoint(0,0));
+
+		//cvNamedWindow("Calibration", CV_WINDOW_AUTOSIZE);
+		//cvShowImage( "Calibration", img);
+
+		//Bilder laden!
+		//cvSmooth( p, image[1], CV_MEDIAN , 3,3 );
+
+		//BgrToGrey(image[1],grauBild);
+
+		// Spielfeld an sich erkennen
+
+		// Spielfeld teilen in 9 Felder
+
+		// jedes Feld anschauen
+			//für jedes Feld einen Wert speichern, konturen oder so
+			//jedes Feld dann auswerten was es ist!
 
 
 		//Konturen orange durchlaufen
@@ -607,8 +655,9 @@ UINT WorkerThread( LPVOID pParam ){
 		}
 
 		// Das gewünschte Bild anzeigen
-		if (iBild_Index == ANZ_BILD) pDlg->ShowImage( pImage,&(aImageBlue[3]));	
+		if (iBild_Index == ANZ_BILD) pDlg->ShowImage( pImage,&(aImageBlue[2]));	
 		else	pDlg->ShowImage(pImage,&(aImageBlue[iBild_Index]));
+		//else	pDlg->ShowImage(pImage,&(aImageBlue[iBild_Index]));
 		
 		// Man muss auch loslassen koennen
 		pCamera->ReleaseFrame( pImage );// Frame freigeben
@@ -617,6 +666,7 @@ UINT WorkerThread( LPVOID pParam ){
 	}
 	
 	shared_mem->SM_Close();
+	pCamera->Stop();
 
 
 	::PostMessage( hWnd, WM_WORKER_THREAD_FINISHED, 0, 0 );
